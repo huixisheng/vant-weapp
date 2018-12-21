@@ -3,6 +3,7 @@ import { VantComponent } from '../common/component';
 // Note that the bitwise operators and shift operators operate on 32-bit ints
 // so in that case, the max safe integer is 2^31-1, or 2147483647
 const MAX = 2147483647;
+function noop () {};
 
 VantComponent({
   field: true,
@@ -18,6 +19,18 @@ VantComponent({
     integer: Boolean,
     disabled: Boolean,
     disableInput: Boolean,
+    params: {
+      type: Object,
+      valut: {}
+    },
+    beforePlus: {
+      type: Function,
+      value: noop
+    },
+    beforeMinus: {
+      type: Function,
+      value: noop
+    },
     min: {
       type: null,
       value: 1
@@ -83,10 +96,15 @@ VantComponent({
         return;
       }
 
-      const diff = type === 'minus' ? -this.data.step : +this.data.step;
-      const value = Math.round((this.data.value + diff) * 100) / 100;
+      const value = this.getChangeValue(type);
       this.triggerInput(this.range(value));
       this.$emit(type);
+    },
+
+    getChangeValue(type) {
+      const diff = type === 'minus' ? -this.data.step : +this.data.step;
+      const value = Math.round((this.data.value + diff) * 100) / 100;
+      return type;
     },
 
     onBlur(event: Weapp.Event) {
@@ -96,11 +114,32 @@ VantComponent({
     },
 
     onMinus() {
-      this.onChange('minus');
+      const beforeMinus = this.properties.beforeMinus;
+      this.beforeHandler(beforeMinus, 'minus');
+    },
+
+    beforeHandler(callback, type) {
+      if (typeof callback == 'function') {
+        const params = this.properties.params;
+        const callbackExec = callback.apply(this, [params, this.properties.value, this.getChangeValue(type)]);
+        if (callbackExec && callbackExec.then) {
+          callbackExec.then(() => {
+            this.onChange(type);
+          }).catch(() => {
+
+          });
+          return;
+        }
+        if (!callbackExec) {
+          return;
+        }
+      }
+      this.onChange(type);
     },
 
     onPlus() {
-      this.onChange('plus');
+      const beforePlus = this.properties.beforePlus;
+      this.beforeHandler(beforePlus, 'plus');
     },
 
     triggerInput(value) {
