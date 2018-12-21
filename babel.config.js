@@ -4,7 +4,7 @@ module.exports = {
       '@babel/preset-env',
       {
         loose: true,
-        modules: false
+        modules: 'commonjs'
       }
     ],
     '@babel/preset-typescript'
